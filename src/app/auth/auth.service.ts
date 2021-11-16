@@ -1,10 +1,7 @@
-import { HttpClient, HttpErrorResponse } from "@angular/common/http";
 import { Injectable } from "@angular/core";
-import { Router } from "@angular/router";
-import { BehaviorSubject, throwError } from "rxjs";
-import { catchError, tap } from "rxjs/operators";
-import { environment } from "src/environments/environment";
-import { User } from "./user.model";
+import { Store } from "@ngrx/store";
+import * as fromApp from '../store/app.reducer';
+import * as AuthActions from '../auth/store/auth.actions';
 
 export interface AuthResponseData {
     email: string;
@@ -18,12 +15,12 @@ export interface AuthResponseData {
 
 @Injectable()
 export class AuthService {
-    user = new BehaviorSubject<User>(null);
+    //user = new BehaviorSubject<User>(null);
     private tokenExpirationTimer: any;
 
-    constructor(private http: HttpClient, private router: Router) {  }
+    constructor(private store: Store<fromApp.AppState>) {  }
 
-    signup(email: string, password: string) {
+    /* signup(email: string, password: string) {
         return this.http.post<AuthResponseData>('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + environment.firebaseAPIKey,
         {
             email: email,
@@ -53,18 +50,20 @@ export class AuthService {
                 return this.handleAuth(resData.email, resData.localId, resData.idToken, +resData.expiresIn);
             })
         );
-    }
+    } */
 
-    logout() {
-        this.user.next(null);
-        this.router.navigate(['/auth']);
+    /* logout() {
+        //this.user.next(null);
+        this.store.dispatch(new AuthActions.Logout());
+        //this.router.navigate(['/auth']);
         localStorage.removeItem('userData');
         if (this.tokenExpirationTimer) {
             clearTimeout(this.tokenExpirationTimer);
         }
         this.tokenExpirationTimer = null;
-    }
+    } */
 
+    /*
     autoLogin() {
         const userData = JSON.parse(localStorage.getItem('userData'));
         
@@ -75,22 +74,41 @@ export class AuthService {
         const loadedUser = new User(userData.email, userData.id, userData._token, new Date(userData._tokenExpirationDate));
 
         if (loadedUser.token) {
-            this.user.next(loadedUser);
+            //this.user.next(loadedUser);
+            this.store.dispatch(new AuthActions.AuthenticateSuccess({
+                email: loadedUser.email,
+                userId: loadedUser.id,
+                token: loadedUser.token,
+                expirationDate: new Date(userData._tokenExpirationDate)
+            }));
             const expirationDuration = new Date(userData._tokenExpirationDate).getTime() - new Date().getTime();
             this.autoLogout(expirationDuration);
         }
-    }
+    } */
 
-    autoLogout(expirationDuration: number) {
+    setLogoutTimer(expirationDuration: number) {
         this.tokenExpirationTimer = setTimeout(() => {
-            this.logout()
+            this.store.dispatch(new AuthActions.Logout());
         }, expirationDuration);
     }
 
-    private handleAuth(email: string, userId: string, token: string, expiresIn: number) {
+    clearLogoutTimer() {
+        if(this.tokenExpirationTimer) {
+            clearTimeout(this.tokenExpirationTimer);
+            this.tokenExpirationTimer = null;
+        }
+    }
+
+    /* private handleAuth(email: string, userId: string, token: string, expiresIn: number) {
         const expirationDate = new Date(new Date().getTime() + expiresIn * 1000);
         const user = new User(email, userId, token, expirationDate);
-        this.user.next(user);
+        //this.user.next(user);
+        this.store.dispatch(new AuthActions.AuthenticateSuccess({
+            email: email,
+            userId: userId,
+            token: token,
+            expirationDate: expirationDate
+        }))
         this.autoLogout(expiresIn * 1000);
         localStorage.setItem('userData', JSON.stringify(user));
     }
@@ -113,6 +131,6 @@ export class AuthService {
                 break;
         }
         return throwError(error);
-    }
+    } */
 
 }
